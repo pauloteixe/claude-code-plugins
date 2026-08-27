@@ -59,7 +59,7 @@
     },
     {
       "name": "nano-banana",
-      "description": "Nano Banana image generation. Use when user asks to generate an image, create an image, make an image, or mentions nano banana. Supports Gemini Flash, Pro, and Nano Banana 2 models.",
+      "description": "Nano Banana image generation. Use when user asks to generate an image, create an image, make an image, or mentions nano banana. Supports the whole Nano Banana family: Nano Banana 2, Nano Banana 2 Lite, Nano Banana Pro, and legacy Nano Banana.",
       "source": "./plugins/nano-banana",
       "skills": [
         "./skills/generate"

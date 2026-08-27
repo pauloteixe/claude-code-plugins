@@ -1,6 +1,6 @@
 ---
 name: generate
-description: Nano Banana (nano-banana) image generation skill. Use this skill when the user asks to "generate an image", "generate images", "create an image", "make an image", uses "nano banana", or requests multiple images like "generate 5 images". Generates images using Google's Gemini models (Flash, Pro, or Nano Banana 2) for any purpose - frontend designs, web projects, illustrations, graphics, hero images, icons, backgrounds, or standalone artwork. Invoke this skill for ANY image generation request.
+description: Nano Banana (nano-banana) image generation skill. Use this skill when the user asks to "generate an image", "generate images", "create an image", "make an image", uses "nano banana", or requests multiple images like "generate 5 images". Generates images with the Nano Banana models (Nano Banana 2, Nano Banana 2 Lite, Nano Banana Pro, and legacy Nano Banana) for any purpose - frontend designs, web projects, illustrations, graphics, hero images, icons, backgrounds, or standalone artwork. Invoke this skill for ANY image generation request.
 ---
 
 # Nano Banana - Gemini Image Generation
@@ -38,11 +38,19 @@ IMPORTANT safety rules:
 
 ## Available Models
 
-| Model | Flag | ID | Best For | Max Resolution |
-|-------|------|----|----------|----------------|
-| **Flash** (Nano Banana) | `flash` | `gemini-2.5-flash-image` | Speed, high-volume tasks | 1024px |
-| **Pro** (Nano Banana Pro) | `pro` | `gemini-3-pro-image-preview` | Professional quality, complex scenes | Up to 4K |
-| **2** (Nano Banana 2) | `2` | `gemini-3.1-flash-image-preview` | Fast + high-res, best all-around | Up to 4K |
+All four Nano Banana models live in this one skill. Pick with `--model`.
+
+| Model | `--model` | Alias | ID | Best For | Sizes |
+|-------|-----------|-------|----|----------|-------|
+| **Nano Banana 2** (default) | `nano-banana-2` | `2` | `gemini-3.1-flash-image` | Fast + high-res, 14 aspect ratios, best all-around | 512, 1K, 2K, 4K |
+| **Nano Banana 2 Lite** | `nano-banana-2-lite` | `2-lite` | `gemini-3.1-flash-lite-image` | Cheapest and fastest, high-volume drafts | 1K only |
+| **Nano Banana Pro** | `nano-banana-pro` | `pro` | `gemini-3-pro-image` | Professional assets, complex scenes, text rendering | 1K, 2K, 4K |
+| **Nano Banana** (legacy) | `nano-banana` | `flash` | `gemini-2.5-flash-image` | Legacy only — prefer Nano Banana 2 Lite | ~1024px |
+
+Notes:
+- Nano Banana 2 and 2 Lite are the Gemini 3.1 image models: they add the `1:4`, `4:1`, `1:8` and `8:1` aspect ratios and accept `--thinking minimal|high`.
+- Nano Banana 2 Lite is not optimized for multiple reference images or multi-turn editing.
+- The legacy model has no resolution control; `--size` is ignored for it.
 
 ## Image Generation Workflow
 
@@ -58,50 +66,72 @@ uv run "${SKILL_DIR}/scripts/image.py" \
 
 Where `${SKILL_DIR}` is the directory containing this SKILL.md file.
 
-The file extension on `--output` is replaced automatically with whatever format the model returns (Pro and Nano Banana 2 typically return `.jpg`, Flash typically returns `.png`, but the API decides). Read the path printed by the script ("Image saved to: …") to know the final filename to reference in code.
+The file extension on `--output` is replaced automatically with whatever format the model returns (the Gemini 3 models typically return `.jpg`, the legacy model typically returns `.png`, but the API decides). Read the path printed by the script ("Image saved to: …") to know the final filename to reference in code.
 
 Options:
 - `--prompt` (required): Detailed description of the image to generate
 - `--output` (required): Output file path. Extension is replaced with the format the model returns.
-- `--aspect` (optional): Named shortcut (`square`, `landscape`, `portrait`) or direct ratio (`1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9`). Default: square
+- `--aspect` (optional): Named shortcut (`square`, `landscape`, `portrait`, `ultrawide`, `banner`, `skyscraper`) or direct ratio (`1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9`). Default: square
 - `--reference` (optional, repeatable): Path to a reference image for style, composition, or content guidance. Can be specified multiple times for multiple references.
-- `--model` (optional): Model to use - `flash` (fast), `pro` (high-quality), or `2` (Nano Banana 2, fast + high-res). Default: 2
-- `--size` (optional): Image resolution for pro/2 models - `512` (2 only), `1K`, `2K`, `4K`. Default: 1K. Ignored for flash.
+- `--model` (optional): `nano-banana-2` (default), `nano-banana-2-lite`, `nano-banana-pro`, `nano-banana`. Short aliases `2`, `2-lite`, `pro`, `flash` also work.
+- `--size` (optional): `512`, `1K` (default), `2K`, `4K` — see the table above for what each model accepts.
+- `--thinking` (optional): `minimal` or `high`, Nano Banana 2 / 2 Lite only. Default is the model default (minimal). Higher thinking trades latency for quality on complex prompts.
 
 ### Aspect Ratios by Model
 
-| Ratio | Flash | Pro | 2 |
-|-------|-------|-----|---|
-| 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9 | Yes | Yes | Yes |
-| 1:4, 1:8, 4:1, 8:1 | No | No | Yes |
+| Ratio | Nano Banana (legacy) | Nano Banana Pro | Nano Banana 2 | Nano Banana 2 Lite |
+|-------|----------------------|-----------------|---------------|--------------------|
+| 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9 | Yes | Yes | Yes | Yes |
+| 1:4, 1:8, 4:1, 8:1 | No | No | Yes | Yes |
+
+Named shortcuts: `square` = 1:1, `landscape` = 16:9, `portrait` = 9:16, `ultrawide` = 21:9, `banner` = 4:1, `skyscraper` = 1:4.
 
 ### Using Different Models
 
-**Flash model** - Fast generation, good for iterations:
-```bash
-uv run "${SKILL_DIR}/scripts/image.py" \
-  --prompt "A minimalist logo design" \
-  --output "/path/to/logo.png" \
-  --model flash
-```
-
-**Pro model** - Higher quality for final assets:
-```bash
-uv run "${SKILL_DIR}/scripts/image.py" \
-  --prompt "A detailed hero illustration for a tech landing page" \
-  --output "/path/to/hero.png" \
-  --model pro \
-  --size 2K
-```
-
-**Nano Banana 2 (default)** - Fast with high-res output and extra aspect ratios:
+**Nano Banana 2 (default)** - Fast, high-res, extra aspect ratios:
 ```bash
 uv run "${SKILL_DIR}/scripts/image.py" \
   --prompt "A vibrant infographic about photosynthesis" \
   --output "/path/to/infographic.png" \
-  --model 2 \
+  --model nano-banana-2 \
   --size 2K \
   --aspect 16:9
+```
+
+Wide banner using one of the ratios only the Gemini 3.1 models support, with deeper thinking:
+```bash
+uv run "${SKILL_DIR}/scripts/image.py" \
+  --prompt "An ultrawide website banner: abstract teal and gold ribbons on deep navy" \
+  --output "/path/to/banner.png" \
+  --model nano-banana-2 \
+  --aspect 8:1 \
+  --size 4K \
+  --thinking high
+```
+
+**Nano Banana 2 Lite** - Cheapest and fastest, good for drafts and high volume:
+```bash
+uv run "${SKILL_DIR}/scripts/image.py" \
+  --prompt "A minimalist logo design" \
+  --output "/path/to/logo.png" \
+  --model nano-banana-2-lite
+```
+
+**Nano Banana Pro** - Premium quality for final assets and heavy text rendering:
+```bash
+uv run "${SKILL_DIR}/scripts/image.py" \
+  --prompt "A detailed hero illustration for a tech landing page" \
+  --output "/path/to/hero.png" \
+  --model nano-banana-pro \
+  --size 2K
+```
+
+**Nano Banana (legacy)** - Only when you specifically need the 2.5 model:
+```bash
+uv run "${SKILL_DIR}/scripts/image.py" \
+  --prompt "A simple abstract texture" \
+  --output "/path/to/texture.png" \
+  --model nano-banana
 ```
 
 ### Using Reference Images
@@ -128,9 +158,10 @@ uv run "${SKILL_DIR}/scripts/image.py" \
 Reference images help Gemini understand the desired style, composition, or visual elements you want in the generated image. When multiple references are provided, all images are sent to the model together.
 
 **Reference image limits:**
-- Flash: up to 3 reference images
-- Pro: up to 6 object images + 5 character images (14 total)
-- 2: up to 10 object images + 4 character images (14 total)
+- Nano Banana 2: up to 14 references — up to 10 object images + up to 4 character images
+- Nano Banana Pro: up to 14 references — up to 6 object images + up to 5 character images + up to 3 style images
+- Nano Banana 2 Lite: not optimized for multiple references; use one, or switch to Nano Banana 2
+- Nano Banana (legacy): up to 3 reference images
 
 ### Step 2: Integrate with Frontend Design
 
